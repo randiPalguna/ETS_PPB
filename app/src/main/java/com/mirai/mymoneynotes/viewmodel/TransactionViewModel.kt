@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -30,8 +29,7 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     val balance = repository.getBalance()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SHARING_TIMEOUT_MS), 0.0)
 
-    val transactionCount = allTransactions
-        .map { it.size }
+    val transactionCount = repository.getTransactionCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SHARING_TIMEOUT_MS), 0)
 
     private val _selectedTypeFilter = MutableStateFlow<TransactionType?>(null)

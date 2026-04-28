@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -21,6 +22,7 @@ import com.mirai.mymoneynotes.ui.screens.AddTransactionScreen
 import com.mirai.mymoneynotes.ui.screens.ChartScreen
 import com.mirai.mymoneynotes.ui.screens.HomeScreen
 import com.mirai.mymoneynotes.ui.screens.TransactionListScreen
+import com.mirai.mymoneynotes.viewmodel.TransactionViewModel
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Home : Screen("home", "Home", Icons.Default.Home)
@@ -32,6 +34,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val sharedViewModel: TransactionViewModel = viewModel()
     val items = listOf(Screen.Home, Screen.Add, Screen.History, Screen.Charts)
 
     Scaffold(
@@ -64,10 +67,10 @@ fun AppNavigation() {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) { HomeScreen() }
-            composable(Screen.Add.route) { AddTransactionScreen() }
-            composable(Screen.History.route) { TransactionListScreen() }
-            composable(Screen.Charts.route) { ChartScreen() }
+            composable(Screen.Home.route) { HomeScreen(viewModel = sharedViewModel) }
+            composable(Screen.Add.route) { AddTransactionScreen(viewModel = sharedViewModel) }
+            composable(Screen.History.route) { TransactionListScreen(viewModel = sharedViewModel) }
+            composable(Screen.Charts.route) { ChartScreen(viewModel = sharedViewModel) }
         }
     }
 }

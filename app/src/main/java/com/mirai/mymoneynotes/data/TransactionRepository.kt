@@ -8,6 +8,8 @@ class TransactionRepository(context: Context) {
 
     fun getAllTransactions(): Flow<List<Transaction>> = transactionDao.getAllTransactions()
 
+    fun getTransactionCount(): Flow<Int> = transactionDao.getTransactionCount()
+
     suspend fun getTransactionById(id: Long): Transaction? = transactionDao.getTransactionById(id)
 
     suspend fun insertTransaction(transaction: Transaction): Long = transactionDao.insertTransaction(transaction)

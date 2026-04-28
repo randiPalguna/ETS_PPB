@@ -13,6 +13,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions ORDER BY date DESC")
     fun getAllTransactions(): Flow<List<Transaction>>
 
+    @Query("SELECT COUNT(*) FROM transactions")
+    fun getTransactionCount(): Flow<Int>
+
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getTransactionById(id: Long): Transaction?
 
