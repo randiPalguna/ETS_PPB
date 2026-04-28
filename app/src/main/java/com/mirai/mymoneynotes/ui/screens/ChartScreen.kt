@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -354,7 +355,7 @@ fun CategoryBreakdownCard(
                 colors = palette,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp)
+                    .height(200.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -567,12 +568,16 @@ fun SimplePieChart(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
+        if (total <= 0.0) return@Box
+
         androidx.compose.foundation.Canvas(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxHeight(0.8f)
+                .size(180.dp)
         ) {
-            val canvasSize = size.minDimension
-            val radius = canvasSize / 2
-            val strokeWidth = 40.dp.toPx()
+            val chartDiameter = size.minDimension * 0.9f
+            val strokeWidth = (chartDiameter * 0.2f).coerceIn(24.dp.toPx(), 32.dp.toPx())
 
             var startAngle = -90f
 
@@ -589,12 +594,12 @@ fun SimplePieChart(
                         width = strokeWidth
                     ),
                     size = androidx.compose.ui.geometry.Size(
-                        width = canvasSize,
-                        height = canvasSize
+                        width = chartDiameter,
+                        height = chartDiameter
                     ),
                     topLeft = Offset(
-                        x = (size.width - canvasSize) / 2,
-                        y = (size.height - canvasSize) / 2
+                        x = (size.width - chartDiameter) / 2,
+                        y = (size.height - chartDiameter) / 2
                     )
                 )
 
@@ -604,11 +609,11 @@ fun SimplePieChart(
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 40.dp)
+            modifier = Modifier.padding(horizontal = 28.dp)
         ) {
             Text(
                 text = formatCurrency(total),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,

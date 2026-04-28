@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Ignore temporary presentation workspace
+/docs/submission/presentation_workspace/

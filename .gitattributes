@@ -1,0 +1,12 @@
+* text=auto
+
+# Keep binaries untouched by EOL normalization
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.pdf binary
+*.pptx binary
+*.apk binary
+*.wasm binary
