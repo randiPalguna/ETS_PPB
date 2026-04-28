@@ -6,11 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.mirai.mymoneynotes.data.Transaction
 import com.mirai.mymoneynotes.data.TransactionRepository
 import com.mirai.mymoneynotes.data.TransactionType
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -19,88 +19,60 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     private val repository = TransactionRepository.getInstance(application)
 
     val allTransactions = repository.getAllTransactions()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SHARING_TIMEOUT_MS), emptyList())
 
     val totalIncome = repository.getTotalIncome()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SHARING_TIMEOUT_MS), 0.0)
 
     val totalExpense = repository.getTotalExpense()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SHARING_TIMEOUT_MS), 0.0)
 
     val balance = repository.getBalance()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SHARING_TIMEOUT_MS), 0.0)
 
-    private val _selectedType = MutableStateFlow(TransactionType.INCOME)
-    val selectedType = _selectedType.asStateFlow()
+    val transactionCount = allTransactions
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SHARING_TIMEOUT_MS), 0)
 
-    private val _selectedCategory = MutableStateFlow("")
-    val selectedCategory = _selectedCategory.asStateFlow()
-
-    private val _amount = MutableStateFlow("")
-    val amount = _amount.asStateFlow()
-
-    private val _description = MutableStateFlow("")
-    val description = _description.asStateFlow()
-
-    private val _date = MutableStateFlow(System.currentTimeMillis())
-    val date = _date.asStateFlow()
-
-    private val _filteredTransactions = MutableStateFlow<List<Transaction>>(emptyList())
-    val filteredTransactions = _filteredTransactions.asStateFlow()
+    private val _selectedTypeFilter = MutableStateFlow<TransactionType?>(null)
+    val selectedTypeFilter = _selectedTypeFilter.asStateFlow()
 
     // Month filtering: Pair<Year, Month> or null for all time
     private val _selectedMonth = MutableStateFlow<Pair<Int, Int>?>(null)
     val selectedMonth = _selectedMonth.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            combine(
-                allTransactions,
-                _selectedMonth
-            ) { transactions, month ->
-                applyFilters(transactions, month)
-            }.collect { filtered ->
-                _filteredTransactions.value = filtered
-            }
-        }
-    }
+    val filteredTransactions = combine(
+        allTransactions,
+        _selectedTypeFilter,
+        _selectedMonth
+    ) { transactions, typeFilter, monthFilter ->
+        applyFilters(
+            transactions = transactions,
+            typeFilter = typeFilter,
+            monthFilter = monthFilter
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(SHARING_TIMEOUT_MS), emptyList())
 
     private fun applyFilters(
         transactions: List<Transaction>,
-        month: Pair<Int, Int>?
+        typeFilter: TransactionType?,
+        monthFilter: Pair<Int, Int>?
     ): List<Transaction> {
-        return if (month == null) {
-            transactions
-        } else {
-            val (year, monthOfYear) = month
-            val calendar = Calendar.getInstance()
-
-            transactions.filter { transaction ->
-                calendar.timeInMillis = transaction.date
-                calendar.get(Calendar.YEAR) == year &&
-                calendar.get(Calendar.MONTH) == monthOfYear
-            }
+        if (typeFilter == null && monthFilter == null) {
+            return transactions
         }
-    }
 
-    fun setSelectedType(type: TransactionType) {
-        _selectedType.value = type
-    }
+        val calendar = Calendar.getInstance()
+        return transactions.filter { transaction ->
+            val matchesType = typeFilter == null || transaction.type == typeFilter
+            if (!matchesType) return@filter false
 
-    fun setSelectedCategory(category: String) {
-        _selectedCategory.value = category
-    }
-
-    fun setAmount(value: String) {
-        _amount.value = value
-    }
-
-    fun setDescription(value: String) {
-        _description.value = value
-    }
-
-    fun setDate(timestamp: Long) {
-        _date.value = timestamp
+            if (monthFilter == null) return@filter true
+            val (year, month) = monthFilter
+            calendar.timeInMillis = transaction.date
+            calendar.get(Calendar.YEAR) == year &&
+                calendar.get(Calendar.MONTH) == month
+        }
     }
 
     fun addTransaction(
@@ -111,7 +83,7 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         date: Long
     ) {
         viewModelScope.launch {
-            val amountValue = amount.toDoubleOrNull() ?: 0.0
+            val amountValue = amount.trim().toDoubleOrNull() ?: 0.0
             if (amountValue > 0 && category.isNotBlank()) {
                 val transaction = Transaction(
                     type = type,
@@ -121,7 +93,6 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
                     description = description
                 )
                 repository.insertTransaction(transaction)
-                clearForm()
             }
         }
     }
@@ -133,50 +104,18 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun filterByType(type: TransactionType?) {
-        viewModelScope.launch {
-            val currentMonth = _selectedMonth.value
-
-            if (type == null) {
-                allTransactions.collect { transactions ->
-                    _filteredTransactions.value = applyFilters(transactions, currentMonth)
-                }
-            } else {
-                repository.getTransactionsByType(type.name).collect { transactions ->
-                    _filteredTransactions.value = applyFilters(transactions, currentMonth)
-                }
-            }
-        }
+        _selectedTypeFilter.value = type
     }
 
     fun filterByMonth(year: Int, month: Int?) {
-        _selectedMonth.value = if (month != null) {
-            Pair(year, month)
-        } else {
-            null
-        }
-
-        // Re-apply current type filter with new month filter
-        viewModelScope.launch {
-            allTransactions.collect { transactions ->
-                val filtered = applyFilters(transactions, _selectedMonth.value)
-                _filteredTransactions.value = filtered
-            }
-        }
+        _selectedMonth.value = month?.let { year to it }
     }
 
-    fun clearForm() {
-        _selectedType.value = TransactionType.INCOME
-        _selectedCategory.value = ""
-        _amount.value = ""
-        _description.value = ""
-        _date.value = System.currentTimeMillis()
-    }
-
-    fun getIncomeCategories() = listOf("Salary", "Bonus", "Gift", "Investment", "Other")
-    fun getExpenseCategories() = listOf("Food", "Transport", "Utilities", "Entertainment", "Shopping", "Health", "Other")
+    fun getIncomeCategories() = INCOME_CATEGORIES
+    fun getExpenseCategories() = EXPENSE_CATEGORIES
 
     fun getAvailableMonths(): List<Pair<Int, Int>> {
-        val transactions = _filteredTransactions.value
+        val transactions = allTransactions.value
         val calendar = Calendar.getInstance()
         val monthsSet = mutableSetOf<Pair<Int, Int>>()
 
@@ -186,5 +125,19 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         }
 
         return monthsSet.sortedByDescending { it.first * 100 + it.second }
+    }
+
+    companion object {
+        private const val SHARING_TIMEOUT_MS = 5_000L
+        private val INCOME_CATEGORIES = listOf("Salary", "Bonus", "Gift", "Investment", "Other")
+        private val EXPENSE_CATEGORIES = listOf(
+            "Food",
+            "Transport",
+            "Utilities",
+            "Entertainment",
+            "Shopping",
+            "Health",
+            "Other"
+        )
     }
 }

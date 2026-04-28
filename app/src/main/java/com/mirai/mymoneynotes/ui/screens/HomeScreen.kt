@@ -29,13 +29,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.mirai.mymoneynotes.ui.theme.DarkBrown
 import com.mirai.mymoneynotes.ui.theme.Gold
 import com.mirai.mymoneynotes.ui.theme.TeaGreen
 import com.mirai.mymoneynotes.ui.theme.Terracotta
@@ -47,9 +45,10 @@ import java.util.Locale
 fun HomeScreen(
     viewModel: TransactionViewModel = viewModel()
 ) {
-    val totalIncome by viewModel.totalIncome.collectAsState(initial = 0.0)
-    val totalExpense by viewModel.totalExpense.collectAsState(initial = 0.0)
-    val balance by viewModel.balance.collectAsState(initial = 0.0)
+    val totalIncome by viewModel.totalIncome.collectAsState()
+    val totalExpense by viewModel.totalExpense.collectAsState()
+    val balance by viewModel.balance.collectAsState()
+    val transactionCount by viewModel.transactionCount.collectAsState()
 
     Column(
         modifier = Modifier
@@ -67,7 +66,7 @@ fun HomeScreen(
         )
 
         BalanceCard(
-            balance = balance ?: 0.0,
+            balance = balance,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -78,11 +77,11 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             IncomeCard(
-                income = totalIncome ?: 0.0,
+                income = totalIncome,
                 modifier = Modifier.weight(1f)
             )
             ExpenseCard(
-                expense = totalExpense ?: 0.0,
+                expense = totalExpense,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -100,7 +99,7 @@ fun HomeScreen(
 
         SummaryCard(
             title = "Total Transactions",
-            value = "0",
+            value = transactionCount.toString(),
             icon = Icons.Default.Info,
             color = Gold
         )

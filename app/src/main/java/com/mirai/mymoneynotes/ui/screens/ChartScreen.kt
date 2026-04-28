@@ -45,62 +45,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mirai.mymoneynotes.data.Transaction
 import com.mirai.mymoneynotes.data.TransactionType
-import com.mirai.mymoneynotes.ui.theme.DarkBrown
-import com.mirai.mymoneynotes.ui.theme.Gold
 import com.mirai.mymoneynotes.ui.theme.Terracotta
 import com.mirai.mymoneynotes.ui.theme.TeaGreen
 import com.mirai.mymoneynotes.viewmodel.TransactionViewModel
 import java.text.NumberFormat
 import java.util.Calendar
 import java.util.Locale
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import com.mirai.mymoneynotes.ui.theme.TeaGreenLight
-import com.mirai.mymoneynotes.ui.theme.WarmIvoryDark
-import androidx.compose.runtime.remember
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChartScreen(
     viewModel: TransactionViewModel = viewModel()
 ) {
-    val transactions by viewModel.filteredTransactions.collectAsState(initial = emptyList())
-    val allTransactions by viewModel.allTransactions.collectAsState(initial = emptyList())
-    val selectedMonth by viewModel.selectedMonth.collectAsState(initial = null)
+    val allTransactions by viewModel.allTransactions.collectAsState()
+    val selectedMonth by viewModel.selectedMonth.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
     var showDatePicker by remember { mutableStateOf(false) }
     val tabs = listOf("Expense", "Income")
 
-    val calendar = Calendar.getInstance()
     val selectedMonthValue = selectedMonth
-    val initialMonth = if (selectedMonthValue != null) {
-        calendar.set(selectedMonthValue.first, selectedMonthValue.second, 1)
-        calendar.timeInMillis
-    } else {
-        System.currentTimeMillis()
-    }
-
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialMonth,
-        initialDisplayedMonthMillis = initialMonth,
-        selectableDates = object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                val cal = Calendar.getInstance()
-                cal.timeInMillis = utcTimeMillis
-                return cal.get(Calendar.DAY_OF_MONTH) == 1
-            }
-
-            override fun isSelectableYear(year: Int): Boolean {
-                val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-                return year in (currentYear - 10)..currentYear
-            }
-        }
-    )
 
     Column(
         modifier = Modifier
@@ -153,7 +123,11 @@ fun ChartScreen(
             }
         }
 
-        val filteredTransactions = transactions.filter {
+        val monthFilteredTransactions = remember(allTransactions, selectedMonthValue) {
+            filterTransactionsByMonth(allTransactions, selectedMonthValue)
+        }
+
+        val filteredTransactions = monthFilteredTransactions.filter {
             if (selectedTab == 0) it.type == TransactionType.EXPENSE
             else it.type == TransactionType.INCOME
         }
@@ -192,6 +166,31 @@ fun ChartScreen(
     }
 
     if (showDatePicker) {
+        val calendar = Calendar.getInstance()
+        val initialMonth = if (selectedMonthValue != null) {
+            calendar.set(selectedMonthValue.first, selectedMonthValue.second, 1)
+            calendar.timeInMillis
+        } else {
+            System.currentTimeMillis()
+        }
+
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialMonth,
+            initialDisplayedMonthMillis = initialMonth,
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    val cal = Calendar.getInstance()
+                    cal.timeInMillis = utcTimeMillis
+                    return cal.get(Calendar.DAY_OF_MONTH) == 1
+                }
+
+                override fun isSelectableYear(year: Int): Boolean {
+                    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+                    return year in (currentYear - 10)..currentYear
+                }
+            }
+        )
+
         val confirmEnabled = derivedStateOf {
             datePickerState.selectedDateMillis != null
         }
@@ -246,6 +245,22 @@ fun ChartScreen(
                 }
             )
         }
+    }
+}
+
+private fun filterTransactionsByMonth(
+    transactions: List<Transaction>,
+    selectedMonth: Pair<Int, Int>?
+): List<Transaction> {
+    if (selectedMonth == null) return transactions
+
+    val calendar = Calendar.getInstance()
+    val (year, month) = selectedMonth
+
+    return transactions.filter { transaction ->
+        calendar.timeInMillis = transaction.date
+        calendar.get(Calendar.YEAR) == year &&
+            calendar.get(Calendar.MONTH) == month
     }
 }
 

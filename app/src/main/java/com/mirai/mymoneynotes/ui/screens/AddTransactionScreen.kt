@@ -80,6 +80,7 @@ fun AddTransactionScreen(
     } else {
         expenseCategories
     }
+    val parsedAmount = amount.toDoubleOrNull()
 
     Column(
         modifier = Modifier
@@ -151,7 +152,7 @@ fun AddTransactionScreen(
                 selectedDate = System.currentTimeMillis()
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = selectedCategory.isNotBlank() && amount.isNotBlank() && amount.toDoubleOrNull() != null && amount.toDoubleOrNull()!! > 0,
+            enabled = selectedCategory.isNotBlank() && (parsedAmount ?: 0.0) > 0,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary
             ),

@@ -62,11 +62,6 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
-    // Vico Charts
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
-    implementation(libs.vico.core)
-
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 

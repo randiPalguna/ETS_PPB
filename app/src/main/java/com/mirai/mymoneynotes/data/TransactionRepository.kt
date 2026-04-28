@@ -16,13 +16,11 @@ class TransactionRepository(context: Context) {
 
     suspend fun deleteTransaction(transaction: Transaction) = transactionDao.deleteTransaction(transaction)
 
-    fun getTransactionsByType(type: String): Flow<List<Transaction>> = transactionDao.getTransactionsByType(type)
+    fun getTotalIncome(): Flow<Double> = transactionDao.getTotalIncome()
 
-    fun getTotalIncome(): Flow<Double?> = transactionDao.getTotalIncome()
+    fun getTotalExpense(): Flow<Double> = transactionDao.getTotalExpense()
 
-    fun getTotalExpense(): Flow<Double?> = transactionDao.getTotalExpense()
-
-    fun getBalance(): Flow<Double?> = transactionDao.getBalance()
+    fun getBalance(): Flow<Double> = transactionDao.getBalance()
 
     companion object {
         @Volatile

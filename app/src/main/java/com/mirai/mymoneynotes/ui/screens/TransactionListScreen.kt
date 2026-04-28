@@ -38,50 +38,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.mirai.mymoneynotes.data.Transaction
 import com.mirai.mymoneynotes.data.TransactionType
 import com.mirai.mymoneynotes.ui.components.TransactionItem
 import com.mirai.mymoneynotes.viewmodel.TransactionViewModel
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionListScreen(
     viewModel: TransactionViewModel = viewModel()
 ) {
-    val transactions by viewModel.filteredTransactions.collectAsState(initial = emptyList())
-    val selectedMonth by viewModel.selectedMonth.collectAsState(initial = null)
-    var filterType by remember { mutableStateOf<TransactionType?>(null) }
+    val transactions by viewModel.filteredTransactions.collectAsState()
+    val selectedMonth by viewModel.selectedMonth.collectAsState()
+    val selectedTypeFilter by viewModel.selectedTypeFilter.collectAsState()
     var showDatePicker by remember { mutableStateOf(false) }
-
-    val calendar = Calendar.getInstance()
     val selectedMonthValue = selectedMonth
-    val initialMonth = if (selectedMonthValue != null) {
-        calendar.set(selectedMonthValue.first, selectedMonthValue.second, 1)
-        calendar.timeInMillis
-    } else {
-        System.currentTimeMillis()
-    }
-
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialMonth,
-        initialDisplayedMonthMillis = initialMonth,
-        selectableDates = object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                val cal = Calendar.getInstance()
-                cal.timeInMillis = utcTimeMillis
-                // Only allow selecting the 1st day of each month for month filtering
-                return cal.get(Calendar.DAY_OF_MONTH) == 1
-            }
-
-            override fun isSelectableYear(year: Int): Boolean {
-                val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-                return year in (currentYear - 5)..currentYear
-            }
-        }
-    )
 
     Column(
         modifier = Modifier
@@ -98,12 +69,9 @@ fun TransactionListScreen(
         )
 
         FilterChips(
-            selectedFilter = filterType,
+            selectedFilter = selectedTypeFilter,
             selectedMonth = selectedMonthValue,
-            onFilterSelected = { type ->
-                filterType = type
-                viewModel.filterByType(type)
-            },
+            onFilterSelected = viewModel::filterByType,
             onMonthFilterClick = { showDatePicker = true }
         )
 
@@ -126,6 +94,32 @@ fun TransactionListScreen(
     }
 
     if (showDatePicker) {
+        val calendar = Calendar.getInstance()
+        val initialMonth = if (selectedMonthValue != null) {
+            calendar.set(selectedMonthValue.first, selectedMonthValue.second, 1)
+            calendar.timeInMillis
+        } else {
+            System.currentTimeMillis()
+        }
+
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialMonth,
+            initialDisplayedMonthMillis = initialMonth,
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    val cal = Calendar.getInstance()
+                    cal.timeInMillis = utcTimeMillis
+                    // Only allow selecting the 1st day of each month for month filtering
+                    return cal.get(Calendar.DAY_OF_MONTH) == 1
+                }
+
+                override fun isSelectableYear(year: Int): Boolean {
+                    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+                    return year in (currentYear - 5)..currentYear
+                }
+            }
+        )
+
         val confirmEnabled = derivedStateOf {
             datePickerState.selectedDateMillis != null
         }
